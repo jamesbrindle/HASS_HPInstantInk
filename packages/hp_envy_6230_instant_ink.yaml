@@ -1,0 +1,454 @@
+# hp_envy_6230_instant_ink.yaml
+
+##################################################################################################################
+# Inputs
+##################################################################################################################
+
+# Inputs for the HP Ink Print Plan
+input_number:
+# The total number of pages that had been printed
+# at the start of this period of the printing plan
+# Set by an automation
+  hp_envy_6230_pages_at_month_start:
+    name: HP Envy 6230 Printed Pages Total at month start
+    min: 0
+    max: 10000
+    step: 1
+    icon: mdi:printer
+    mode: box
+# The current monthly allowance number of pages
+# SET THIS ONCE FOR THE INAUGURAL RUN, and after then it is set by an automation
+  hp_envy_6230_pages_monthly_allowance:
+    name: HP Envy Monthly Allowance Pages
+    min: 10
+    max: 300
+    step: 1
+    icon: mdi:printer
+    mode: box
+# The maximum number of rollover pages allowed.
+# SET THIS ACCORDING TO YOUR PLAN
+  hp_envy_6230_pages_rollover_monthly_max_allowance:
+    name: HP Envy 6230 Rollover Maximum Pages
+    min: 0
+    max: 600
+    step: 1
+    icon: mdi:printer
+    mode: box
+# The number of pages that remain of the rollover allowance for this month
+# SET THIS ONCE FOR THE INAUGURAL RUN, and after then it is set by an automation
+  hp_envy_6230_pages_rollover_allowance:
+    name: HP Envy 6230 Rollover Allowance Pages
+    min: 0
+    max: 600
+    step: 1
+    icon: mdi:printer
+    mode: box
+# The number of pages in each overprint block, when
+# the Monthly Allowance plus Rollover are exceeded
+# SET THIS ACCORDING TO YOUR PLAN
+  hp_envy_6230_pages_overprint_block_size:
+    name: HP Envy 6230 Over Print Block Size
+    min: 0
+    max: 100
+    step: 1
+    icon: mdi:printer
+    mode: box
+# The cost of each overprint block, in £
+# SET THIS ACCORDING TO YOUR PLAN
+  hp_envy_6230_pages_overprint_block_cost:
+    name: HP Envy 6230 Over Print Block Cost
+    min: 0
+    max: 50
+    step: 0.01
+    icon: mdi:currency-gbp
+    mode: box
+# The number of free pages remaining to trigger a notification
+  hp_envy_6230_free_pages_remaining_notification:
+    name: HP Envy 6230 Free Pages Notification
+    min: 1
+    max: 15000
+    step: 1
+    icon: mdi:bell-alert
+    mode: box
+
+## A helper to store the total number of pages printed, to make it set
+## the sensor.hp_envy_6230_total_pages_printed, after a reboot, and if
+## the printer is switched off.
+  hp_envy_6230_total_pages_printed_inp:
+    name: HP Envy 6230 Set Total Pages Printed
+    min: 1
+    max: 150000
+    step: 1
+    icon: mdi:printer
+    mode: box
+## A helper to store the black ink amount, to make it set the graph
+## after a reboot, and if the printer is switched off.
+  hp_envy_6230_series_black_ink:
+    name: HP Envy 6230 Black Ink
+    min: 0
+    max: 100
+    step: 1
+    icon: mdi:printer
+    mode: box
+    unit_of_measurement: '%'
+## A helper to store the tri-colour ink amount, to make it set the graph
+## after a reboot, and if the printer is switched off.
+  hp_envy_6230_series_tri_color_ink:
+    name: HP Envy 6230 Tri-Colour Ink
+    min: 0
+    max: 100
+    step: 1
+    icon: mdi:printer
+    mode: box
+    unit_of_measurement: '%'
+
+# The start date of this period of the print plan
+# SET THIS ONCE FOR THE INAUGURAL RUN, and after then it is set by an automation
+input_datetime:
+  hp_envy_6230_this_period_start_date:
+    name: HP Envy 6230 This Period Start Date
+    has_date: true
+    has_time: false
+    icon: mdi:calendar
+
+# SET THIS ACCORDING TO YOUR PLAN
+input_select:
+  hp_envy_6230_print_plan:
+    name: HP Envy 6230 Print Plan
+    options:
+      - Free
+      - Paid
+    icon: mdi:printer
+
+##################################################################################################################
+# Sensors
+##################################################################################################################
+
+template:
+  - sensor:
+      # 1. Total Pages Printed
+      - name: "HP Envy 6230 Total Pages Printed"
+        unique_id: hp_envy_6230_total_pages_printed
+        icon: mdi:printer
+        state: >-
+          {% if states('sensor.hp_printer_total_pages') in ['unavailable', 'unknown'] %}
+            {{ states('input_number.hp_envy_6230_total_pages_printed_inp') | int(0) }}
+          {% else %}
+            {{ states('sensor.hp_printer_total_pages') | int(0) }}
+          {% endif %}
+        unit_of_measurement: "pages"
+        state_class: total_increasing
+
+      # 2. Allowance Pages Remaining
+      - name: "HP Envy 6230 Allowance Pages Remaining"
+        unique_id: hp_envy_6230_allowance_pages_remaining
+        icon: mdi:calendar-check
+        state: >-
+          {% set month_start = states('input_number.hp_envy_6230_pages_at_month_start') | int(0) %}
+          {% set allowance = states('input_number.hp_envy_6230_pages_monthly_allowance') | int(0) %}
+          {% set printed = states('sensor.hp_envy_6230_total_pages_printed') | int(0) %}
+          {% if (month_start + allowance - printed) >= 0 %}
+            {{ month_start + allowance - printed }}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "pages"
+
+      # 3. Next Renewal Date
+      - name: "HP Envy 6230 Next Renewal Date"
+        unique_id: hp_envy_6230_next_renewal_date
+        icon: mdi:calendar-today
+        device_class: timestamp
+        state: >-
+          {% set date_str = states('input_datetime.hp_envy_6230_this_period_start_date') %}
+          {% if date_str not in ['unavailable', 'unknown'] %}
+            {% set start_dt = as_datetime(date_str) %}
+            {% if start_dt is not none %}
+              {# Calculate the same day in the next month safely #}
+              {% set next_month = (start_dt.month % 12) + 1 %}
+              {% set next_year = start_dt.year + (1 if start_dt.month == 12 else 0) %}
+              {{ start_dt.replace(year=next_year, month=next_month) | as_local }}
+            {% else %}
+              unknown
+            {% endif %}
+          {% else %}
+            unknown
+          {% endif %}
+
+      # 4. Allowance Days Remaining
+      - name: "HP Envy 6230 Allowance Days Remaining"
+        unique_id: hp_envy_6230_allowance_days_remaining
+        icon: mdi:calendar-month
+        state: >-
+          {% set renewal = states('sensor.hp_envy_6230_next_renewal_date') %}
+          {% if renewal not in ['unavailable', 'unknown'] %}
+            {% set renewal_date = as_datetime(renewal) %}
+            {% if renewal_date is not none %}
+              {{ ((renewal_date.date() - now().date()).days) | int(0) }}
+            {% else %}
+              0
+            {% endif %}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "days"
+
+      # 5. Rollover Pages Remaining
+      - name: "HP Envy 6230 Rollover Pages Remaining"
+        unique_id: hp_envy_6230_rollover_pages_remaining
+        icon: mdi:calendar-check
+        state: >-
+          {% set month_start = states('input_number.hp_envy_6230_pages_at_month_start') | int(0) %}
+          {% set allowance = states('input_number.hp_envy_6230_pages_monthly_allowance') | int(0) %}
+          {% set rollover = states('input_number.hp_envy_6230_pages_rollover_allowance') | int(0) %}
+          {% set printed = states('sensor.hp_envy_6230_total_pages_printed') | int(0) %}
+          {% if (month_start + allowance - printed < 0) and (month_start + allowance + rollover - printed >= 0) %}
+            {{ month_start + allowance + rollover - printed }}
+          {% elif (month_start + allowance - printed < 0) and (month_start + allowance + rollover - printed < 0) %}
+            0
+          {% else %}
+            {{ rollover }}
+          {% endif %}
+        unit_of_measurement: "pages"
+
+      # 6. Total Free Pages Remaining
+      - name: "HP Envy 6230 Total Free Pages Remaining"
+        unique_id: hp_envy_6230_total_free_pages_remaining
+        icon: mdi:calendar-check
+        state: >-
+          {% set rollover = states('sensor.hp_envy_6230_rollover_pages_remaining') | int(0) %}
+          {% set allowance = states('sensor.hp_envy_6230_allowance_pages_remaining') | int(0) %}
+          {{ allowance + rollover }}
+        unit_of_measurement: "pages"
+
+      # 7. Over Allowance Prints
+      - name: "HP Envy 6230 Over Allowance Prints"
+        unique_id: hp_envy_6230_pages_overprint
+        icon: mdi:alert
+        state: >-
+          {% set month_start = states('input_number.hp_envy_6230_pages_at_month_start') | int(0) %}
+          {% set allowance = states('input_number.hp_envy_6230_pages_monthly_allowance') | int(0) %}
+          {% set rollover = states('input_number.hp_envy_6230_pages_rollover_allowance') | int(0) %}
+          {% set printed = states('sensor.hp_envy_6230_total_pages_printed') | int(0) %}
+          {% if (month_start + allowance + rollover) < printed %}
+            {{ printed - rollover - allowance - month_start }}
+          {% else %}
+            0
+          {% endif %}
+        unit_of_measurement: "pages"
+
+      # 8. Over Allowance Cost
+      - name: "HP Envy 6230 Over Allowance Cost"
+        unique_id: hp_envy_6230_pages_overprint_cost
+        state: >-
+          {% set overprint = states('sensor.hp_envy_6230_pages_overprint') | int(0) %}
+          {% set block_size = states('input_number.hp_envy_6230_pages_overprint_block_size') | int(1) %}
+          {% set block_cost = states('input_number.hp_envy_6230_pages_overprint_block_cost') | float(0) %}
+          {% if overprint == 0 %}
+            0.00
+          {% else %}
+            {{ ((1 + ((overprint - 1) / block_size) | int(0)) * block_cost) | round(2) }}
+          {% endif %}
+        device_class: monetary
+        unit_of_measurement: GBP
+
+      # 9. Over Allowance Prints Remaining
+      - name: "HP Envy 6230 Over Allowance Prints Remaining"
+        unique_id: hp_envy_6230_pages_overprint_remaining
+        icon: mdi:calendar-check
+        state: >-
+          {% set overprint = states('sensor.hp_envy_6230_pages_overprint') | int(0) %}
+          {% set block_size = states('input_number.hp_envy_6230_pages_overprint_block_size') | int(1) %}
+          {% if overprint == 0 or (overprint % block_size == 0) %}
+            0
+          {% else %}
+            {{ block_size - (overprint % block_size) }}
+          {% endif %}
+        unit_of_measurement: "pages"
+
+# Scrape sensor for HP Envy 6230 Total Pages Printed
+# Scrape Sensor was rewritten in Home Assistant
+# YOU WILL NEED TO AMEND THE PRINTER URL
+# YOU MAY NEED TO AMEND THE 'SELECT' - CHECK THE XML FILE OF YOUR PRINTER
+#- platform: scrape
+#  resource: http://hp-envy.lan/DevMgmt/ProductUsageDyn.xml
+#  name: hp_envy_6230_total_pages_printed_xml
+#  select: 'dd\:TotalImpressions[PEID="5082"]'
+#  value_template: >-
+#    {{ value|int(-1) }}
+
+##################################################################################################################
+# Alternative sensors using the command line. Do not work in HASSOS
+##################################################################################################################
+#
+# Used with input_datetime, & input_number, to track the state of HP Printer Instant Ink
+
+# Gets the HP Printer Total Pages Printed from the printer's web service
+# Inspired by: https://community.home-assistant.io/t/command-line-sensor-with-a-value-template-struggling/125957/3
+# Needs package, 'xml-twig-tools', to be installed in Raspbian
+#- platform: command_line
+#  name: "HP Envy 6230 Total Pages Printed"
+#  command: "xml_grep 'dd:TotalImpressions[@PEID=\"5082\"]' http://hp-envy.lan/DevMgmt/ProductUsageDyn.xml --text_only"
+#  value_template: "{{ value }}"
+# Gets the HP Ink Next Allowance Renewal Date, using the command line for the calculation
+
+# It's a command line sensor because the command line is better at handling date arithmetic
+#- platform: command_line
+#  name: "HP Envy 6230 Next Renewal Date"
+#  command: "date -d '{{ states('input_datetime.hp_envy_6230_this_period_start_date') }} 1 month' +%Y-%m-%d"
+#  value_template: "{{ value }}"
+
+# NEW SYNTAX FOR COMMAND LINE
+#command_line:
+#  - sensor:
+#      name: "HP Envy 6230 Next Renewal Date"
+#      command: "date -d '{{ states('input_datetime.hp_envy_6230_this_period_start_date') }} 1 month' +%Y-%m-%d"
+#      value_template: "{{ value }}"
+
+
+##################################################################################################################
+# Automations
+##################################################################################################################
+
+automation:
+- id: '1588925532080'
+  alias: HP Envy 6230 Page Reset
+  description: >-
+    Sets: - Total number of pages printed at the start of the period -
+    Start Date of this period (to store a date to calculate the next one) - Maximum
+    Rollover Allowance value for this month - Rollover Remaining to new Maximum Rollover
+    Allowance value for this month - Rollover from overprint pages
+  trigger:
+    - at: "00:00:05"
+      platform: time
+  condition:
+    - condition: template
+      value_template: >-
+        {% set start_date = states('input_datetime.hp_envy_6230_this_period_start_date') %}
+        {% if start_date not in ['unknown', 'unavailable'] %}
+          {{ now().day == as_datetime(start_date).day }}
+        {% else %}
+          false
+        {% endif %}
+  action:
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.hp_envy_6230_pages_rollover_allowance
+      data:
+        value: >-
+          {% if is_state('input_select.hp_envy_6230_print_plan', 'Free') %}
+            {## Free Plans accrue rollovers only from the OverPrint counter ##}
+            {% if states('sensor.hp_envy_6230_pages_overprint_remaining') | int(0) > 0 %}
+              {{ states('sensor.hp_envy_6230_pages_overprint_remaining') | int(0) }}
+            {% else %}
+              {{ states('sensor.hp_envy_6230_rollover_pages_remaining') | int(0) }}
+            {% endif %}
+          {% else %}
+            {## Paid Plans accrue rollovers from both Unused Standard Prints, and from the OverPrint counter ##}
+            {% set overprint = states('sensor.hp_envy_6230_pages_overprint') | int(0) %}
+            {% set block_size = states('input_number.hp_envy_6230_pages_overprint_block_size') | int(1) %}
+            {% set max_allowance = states('input_number.hp_envy_6230_pages_rollover_monthly_max_allowance') | int(0) %}
+            {% set total_free = states('sensor.hp_envy_6230_total_free_pages_remaining') | int(0) %}
+            
+            {% if overprint > 0 and (overprint % block_size) > 0 %} 
+              {{ block_size - (overprint % block_size) }}
+            {% elif total_free > max_allowance %}
+              {{ max_allowance }} 
+            {% else %}
+              {{ total_free }} 
+            {% endif %}
+          {% endif %}
+
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.hp_envy_6230_pages_at_month_start
+      data:
+        value: "{{ states('sensor.hp_envy_6230_total_pages_printed') | int(0) }}"
+
+    - action: input_datetime.set_datetime
+      target:
+        entity_id: input_datetime.hp_envy_6230_this_period_start_date
+      data:
+        date: "{{ now().strftime('%Y-%m-%d') }}"
+
+##################################################################################################################
+
+- id: '1588925532191'
+  alias: HP Envy 6230 Alert if remaining Free Pages count is X pages
+  description: "Sends an alert if the HP Envy 6230 Free Pages count matches the notification threshold."
+  trigger:
+    - platform: template
+      value_template: >-
+        {{ states('sensor.hp_envy_6230_total_free_pages_remaining') | int(0) == states('input_number.hp_envy_6230_free_pages_remaining_notification') | int(0) }}
+  condition: []
+  action:
+    - action: notify.pushover
+      data:
+        title: HP Instant Ink Alert
+        message: >-
+          <br/><b>Total Free Pages Remaining:</b> {{ states('sensor.hp_envy_6230_total_free_pages_remaining') | int(0) }} pages<br/><br/>
+          &nbsp;&nbsp;• <b>Allowance Remaining:</b> {{ states('sensor.hp_envy_6230_allowance_pages_remaining') | int(0) }} pages<br/>
+          &nbsp;&nbsp;• <b>Rollover Remaining:</b> {{ states('sensor.hp_envy_6230_rollover_pages_remaining') | int(0) }} pages<br/>
+          &nbsp;&nbsp;• <b>Black Ink Level:</b> {{ states('input_number.hp_envy_6230_series_black_ink') | int(0) }}%<br/>
+          &nbsp;&nbsp;• <b>Tri-Color Ink Level:</b> {{ states('input_number.hp_envy_6230_series_tri_color_ink') | int(0) }}%<br/><br/>
+          <b>Days Until Next Renewal: </b>{{ states('sensor.hp_envy_6230_allowance_days_remaining') | int(0) }} days ({{ as_datetime(states('sensor.hp_envy_6230_next_renewal_date')).strftime('%d/%m/%Y') }})
+        data:
+          html: 1
+          sound: spacealarm
+          url: https://home.jb-net.co.uk/lovelace/other-devices-mobile
+          priority: 1
+          
+    - action: notify.email
+      data:
+        title: "HP Instant Ink Alert"
+        message: >-
+          Total Free Pages Remaining: {{ states('sensor.hp_envy_6230_total_free_pages_remaining') | int(0) }} pages.
+        data:
+          html: >-
+              <b>Total Free Pages Remaining:</b> {{ states('sensor.hp_envy_6230_total_free_pages_remaining') | int(0) }} pages<br/><br/>
+              &nbsp;&nbsp;• <b>Allowance Remaining:</b> {{ states('sensor.hp_envy_6230_allowance_pages_remaining') | int(0) }} pages<br/>
+              &nbsp;&nbsp;• <b>Rollover Remaining:</b> {{ states('sensor.hp_envy_6230_rollover_pages_remaining') | int(0) }} pages<br/>
+              &nbsp;&nbsp;• <b>Black Ink Level:</b> {{ states('input_number.hp_envy_6230_series_black_ink') | int(0) }}%<br/>
+              &nbsp;&nbsp;• <b>Tri-Color Ink Level:</b> {{ states('input_number.hp_envy_6230_series_tri_color_ink') | int(0) }}%<br/><br/>
+              <b>Days Until Next Renewal: </b>{{ states('sensor.hp_envy_6230_allowance_days_remaining') | int(0) }} days ({{ as_datetime(states('sensor.hp_envy_6230_next_renewal_date')).strftime('%d/%m/%Y') }})
+          
+      
+##################################################################################################################
+
+- id: '1653739817420'
+  alias: HP Envy 6230 change of Total Pages Printed
+  description: >-
+    Sets the input_number values for Total Pages Printed, Black Ink, and Tri-Colour Ink.
+    These allow current values to show if Home Assistant is rebooted while the printer is switched off.
+  trigger:
+      # Trigger 1: Run whenever the printer comes online
+    - platform: template
+      value_template: "{{ states('sensor.hp_printer_total_pages') not in ['unavailable', 'unknown'] }}"
+      
+      # Whenever sensor.hp_printer_total_pages changes
+    - platform: state
+      entity_id: sensor.hp_printer_total_pages
+      
+  condition:
+      - condition: template
+        value_template: "{{ trigger.to_state.state not in ['unavailable', 'unknown'] }}"
+    
+  action:
+    - action: input_number.set_value
+      data:
+        value: "{{ states('sensor.hp_envy_6230_total_pages_printed') | int(0) }}"
+      target:
+        entity_id: input_number.hp_envy_6230_total_pages_printed_inp
+    - action: input_number.set_value
+      data:
+        value: "{{ states('sensor.hp_printer_black_remaining') | int(0) }}"
+      target:
+        entity_id: input_number.hp_envy_6230_series_black_ink
+    - action: input_number.set_value
+      data:
+        value: "{{ states('sensor.hp_printer_colour_remaining') | int(0) }}"
+      target:
+        entity_id: input_number.hp_envy_6230_series_tri_color_ink
+  mode: single
+
+

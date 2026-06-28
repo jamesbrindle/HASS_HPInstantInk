@@ -1,0 +1,79 @@
+type: vertical-stack
+cards:
+  - type: custom:popup-card
+    dismissable: true
+    icon: mdi:printer
+    title: HP Instank Ink Status
+    adaptive: false
+    icon_close: false
+    popup_card_all_views: false
+    dismiss_icon: ""
+    timeout_hide_progress: false
+    target:
+      entity_id: sensor.hp_envy_6230_total_free_pages_remaining
+    popup_card_id: "#hp-instant-ink"
+    card:
+      type: vertical-stack
+      cards:
+        - type: entities
+          entities:
+            - entity: sensor.hp_envy_6230_total_pages_printed
+              name: Total Pages Printed
+            - entity: sensor.hp_envy_6230_total_free_pages_remaining
+              name: Total Free Pages Remaining
+            - entity: sensor.hp_envy_6230_allowance_pages_remaining
+              name: Monthly Allowance Remaining
+            - entity: sensor.hp_envy_6230_rollover_pages_remaining
+              name: Rollover Allowance Remaining
+            - entity: sensor.hp_envy_6230_pages_overprint_remaining
+              name: Over Print Remaining from Block
+            - entity: sensor.hp_envy_6230_pages_overprint
+              name: Over Print Pages
+            - entity: sensor.hp_envy_6230_pages_overprint_cost
+              name: Over Print Cost
+            - entity: sensor.hp_envy_6230_next_renewal_date
+              name: Next Renewal Date
+              format: date
+            - entity: sensor.hp_envy_6230_allowance_days_remaining
+              name: Allowance Days Remaining
+            - entity: input_boolean.hp_instant_ink_config_toggle
+              tap_action:
+                action: toggle
+          card_mod:
+            style: |
+              ha-card {
+                margin-top: -20px !important;
+
+                padding-bottom: 0px !important;
+                padding-top: 0px !important;
+                border: none !important;
+                box-shadow: none !important;
+              }
+        - type: conditional
+          conditions:
+            - condition: state
+              entity: input_boolean.hp_instant_ink_config_toggle
+              state: "on"
+          card:
+            type: entities
+            entities:
+              - entity: input_datetime.hp_envy_6230_this_period_start_date
+                name: Instant Ink Period Start
+              - entity: input_number.hp_envy_6230_pages_at_month_start
+                name: Printed Pages at Month Start
+              - entity: input_number.hp_envy_6230_free_pages_remaining_notification
+                name: Free Pages Left Alert
+              - entity: input_select.hp_envy_6230_print_plan
+              - entity: input_number.hp_envy_6230_pages_monthly_allowance
+                name: Monthly Pages Allowance
+              - entity: input_number.hp_envy_6230_pages_rollover_allowance
+                name: Rollover Allowance Remaining
+              - entity: input_number.hp_envy_6230_pages_rollover_monthly_max_allowance
+                name: Monthly Rollover Allowance
+              - entity: input_number.hp_envy_6230_pages_overprint_block_size
+                name: Over Print Block Size
+              - entity: input_number.hp_envy_6230_pages_overprint_block_cost
+                name: Over Print Block Cost
+            title: HP Instant Ink Configuration
+grid_options:
+  columns: full

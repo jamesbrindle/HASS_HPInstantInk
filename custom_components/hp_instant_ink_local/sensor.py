@@ -37,7 +37,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.util import Throttle
 
 _LOGGER = logging.getLogger(__name__)
-_RESOURCE = 'http://hp-envy.lan/DevMgmt/ProductUsageDyn.xml'
+_RESOURCE = 'http://192.168.1.24/DevMgmt/ProductUsageDyn.xml'
 
 ATTRIBUTION = 'Data provided by HP Printer'
 DEFAULT_ICON = 'mdi:printer'
@@ -52,7 +52,7 @@ tp = Total Pages
 
 SENSOR_TYPES = {
     'sp': ['HP Printer Subscription Pages', ' '],
-    'tp': ['HP Printer Total Pages', ' '],
+    'tp': ['HP Printer Total Pages', '5'],
     'cr': ['HP Printer Colour Remaining', ' '],
     'br': ['HP Printer Black Remaining', ' '],
 }
