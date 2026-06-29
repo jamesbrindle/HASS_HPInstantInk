@@ -220,6 +220,13 @@ template:
           {% set allowance = states('sensor.hp_envy_6230_allowance_pages_remaining') | int(0) %}
           {{ allowance + rollover }}
         unit_of_measurement: "pages"
+     
+     # 6.1 - A Mirror of Total Free Pages Remaining - For use with popup card   
+      - name: "HP Envy 6230 Total Free Pages Remaining - Mirror"
+        unique_id: hp_envy_6230_total_free_pages_remaining_mirror
+        state: "{{ states('sensor.hp_envy_6230_total_free_pages_remaining') }}"
+        unit_of_measurement: "pages" # Optional: keeps the unit consistent
+        icon: mdi:calendar-check
 
       # 7. Over Allowance Prints
       - name: "HP Envy 6230 Over Allowance Prints"
@@ -425,9 +432,13 @@ automation:
     - platform: template
       value_template: "{{ states('sensor.hp_printer_total_pages') not in ['unavailable', 'unknown'] }}"
       
-      # Whenever sensor.hp_printer_total_pages changes
+      # Trigger 2: Whenever sensor.hp_printer_total_pages changes
     - platform: state
       entity_id: sensor.hp_printer_total_pages
+      
+      # Trigger 3: Every 30 minutes
+    - platform: time_pattern
+      minutes: "/30"
       
   condition:
       - condition: template
