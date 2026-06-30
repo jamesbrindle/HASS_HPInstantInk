@@ -1,3 +1,10 @@
+# Note
+
+This is a fork from: https://github.com/EventuallyFixed/HASS_HPInstantInk
+
+It's been modified for my own printer: HP Envy Photo 6230 and some minor improvements to the calculations and automations - Now being compatible with recent version of HomeAssistant (2026.6)
+
+
 # HASS_HPInstantInk
 ## Overview
 HP Instant Ink counter for Home Assistant
