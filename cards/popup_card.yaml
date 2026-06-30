@@ -6,11 +6,11 @@ cards:
     title: HP Instank Ink Status
     adaptive: false
     icon_close: false
-    popup_card_all_views: false
+    popup_card_all_views: true
     dismiss_icon: ""
     timeout_hide_progress: false
     target:
-      entity_id: sensor.hp_envy_6230_total_free_pages_remaining
+      entity_id: sensor.hp_envy_6230_total_free_pages_remaining_mirror
     popup_card_id: "#hp-instant-ink"
     card:
       type: vertical-stack
@@ -26,7 +26,7 @@ cards:
             - entity: sensor.hp_envy_6230_rollover_pages_remaining
               name: Rollover Allowance Remaining
             - entity: sensor.hp_envy_6230_pages_overprint_remaining
-              name: Over Print Remaining from Block
+              name: Over Allowance Remaining
             - entity: sensor.hp_envy_6230_pages_overprint
               name: Over Print Pages
             - entity: sensor.hp_envy_6230_pages_overprint_cost

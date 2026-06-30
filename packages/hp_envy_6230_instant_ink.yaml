@@ -439,11 +439,27 @@ automation:
       # Trigger 3: Every 30 minutes
     - platform: time_pattern
       minutes: "/30"
-      
-  condition:
-      - condition: template
-        value_template: "{{ trigger.to_state.state not in ['unavailable', 'unknown'] }}"
-    
+
+  condition:      
+  - condition: not
+    conditions:
+      - condition: or
+        conditions:
+          - condition: state
+            entity_id: sensor.hp_printer_total_pages
+            state:
+              - unavailable
+              - unknown
+          - condition: state
+            entity_id: sensor.hp_printer_black_remaining
+            state:
+              - unavailable
+              - unknown
+          - condition: state
+            entity_id: sensor.hp_printer_colour_remaining
+            state:
+              - unavailable
+              - unknown
   action:
     - action: input_number.set_value
       data:
@@ -461,5 +477,3 @@ automation:
       target:
         entity_id: input_number.hp_envy_6230_series_tri_color_ink
   mode: single
-
-
